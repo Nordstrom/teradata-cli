@@ -1,0 +1,12 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    jdbc-teradata (0.2.0)
+    trollop (2.0)
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  jdbc-teradata (~> 0.2.0)
+  trollop
