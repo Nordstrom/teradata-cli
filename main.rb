@@ -84,8 +84,10 @@ def stream_query_results(recordset, writer)
       if [1, -9, 12, -15, 91].include? column_types[i]
         # Only quote the output if the value internally contains the delimiting character or quotes
         col_value = recordset.getString(i)
-        if col_value.include?(@opts[:delimiter]) or col_value.include?(@opts[:quotechar])
-          col_value = "\"#{col_value}\""
+        if not col_value.nil? 
+          if col_value.include?(@opts[:delimiter]) or col_value.include?(@opts[:quotechar])
+            col_value = "\"#{col_value}\""
+          end
         end
 
         row_values.push(col_value)
