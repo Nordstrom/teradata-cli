@@ -16,11 +16,11 @@ Usage
 Type teradata-cli --help for a list of parameters.
 DB connection information can be provided either with the individual command line args --host, --username, and --password or a path to a yaml file via the --creds arg. The format of the creds file is like so:
 
-<code>
-host: <db_host_name><br />
-username: <db_username><br />
-password: <db_password>
-</code>
+```yaml
+host: [db_host_name]
+username: [db_username]
+password: [db_password]
+```
 
 Roadmap
 --------------------------
