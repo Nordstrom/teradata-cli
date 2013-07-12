@@ -53,7 +53,7 @@ def create_connection(opts)
     creds_hash = YAML.load_file(opts[:creds])
     host, username, password = creds_hash["host"], creds_hash["username"], creds_hash["password"]
   else
-    host, username, password = creds_hash[:host], creds_hash[:username], creds_hash[:password]   
+    host, username, password = opts[:host], opts[:username], opts[:password]   
   end
 
   if blank?(host) or blank?(username) or blank?(password)
@@ -70,7 +70,7 @@ def get_sql_command(opts)
 
     file = File.open(opts[:file], 'rb')
     file.read
-  elsif opts[:command].blank? 
+  elsif blank?(opts[:command])
     raise "Either the --file or --command argument must be provided"
   else
     opts[:command]    
