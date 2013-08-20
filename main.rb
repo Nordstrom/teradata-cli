@@ -21,10 +21,10 @@ Jdbc::Teradata::load_driver
 end
 
 def main()
+  # print @opts.inspect
   teradata_connection = create_connection(@opts)  
   sql_statement = teradata_connection.create_statement
   sql_statement.setQueryTimeout(@opts[:timeout])
-
   sql_cmd = get_sql_command(@opts)
   
   # Execute the Teradata command
@@ -64,6 +64,13 @@ def create_connection(opts)
     "jdbc:teradata://#{host}/", username, password)
 end
 
+def format_inline_sql_cmd(cmd)
+  lines = cmd.split("\n")
+  # Strip off leading and trailing whitespace on each line then join back up with spaces
+  lines.map! {|l| l.strip().delete('"') }
+  lines.join(' ')
+end 
+
 def get_sql_command(opts)
   if not blank?(opts[:file])
     raise "File #{opts[:file]} does not exist" unless File.exist?(opts[:file])
@@ -73,7 +80,7 @@ def get_sql_command(opts)
   elsif blank?(opts[:command])
     raise "Either the --file or --command argument must be provided"
   else
-    opts[:command]    
+    format_inline_sql_cmd(opts[:command])
   end
 end
 
