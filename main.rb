@@ -27,10 +27,18 @@ def main()
   sql_statement.setQueryTimeout(@opts[:timeout])
   sql_cmd = get_sql_command(@opts)
   
-  # Execute the Teradata command
   begin
-    recordset = sql_statement.execute_query(sql_cmd)
-    
+    # Execute the Teradata command
+    begin
+      recordset = sql_statement.execute_query(sql_cmd)
+    rescue com.teradata.jdbc.jdbc_4.util.JDBCException => e
+      $stderr.puts "Database exception: #{e.message}"
+      return
+    rescue Exception => e
+      $stderr.puts "Error encountered: #{e.message}"
+      return
+    end
+
     if @opts[:output] 
       File.open(@opts[:output], 'w') do |file|
         stream_query_results(recordset, file, @opts)
@@ -38,10 +46,7 @@ def main()
     else
       stream_query_results(recordset, $stdout, @opts)
     end
-  rescue Exception => e
-    raise e
   ensure
-    # Ensure the connection gets closed
     teradata_connection.close
   end
 end
@@ -64,13 +69,6 @@ def create_connection(opts)
     "jdbc:teradata://#{host}/", username, password)
 end
 
-def format_inline_sql_cmd(cmd)
-  lines = cmd.split("\n")
-  # Strip off leading and trailing whitespace on each line then join back up with spaces
-  lines.map! {|l| l.strip().delete('"') }
-  lines.join(' ')
-end 
-
 def get_sql_command(opts)
   if not blank?(opts[:file])
     raise "File #{opts[:file]} does not exist" unless File.exist?(opts[:file])
@@ -80,7 +78,7 @@ def get_sql_command(opts)
   elsif blank?(opts[:command])
     raise "Either the --file or --command argument must be provided"
   else
-    format_inline_sql_cmd(opts[:command])
+    opts[:command].strip().delete('"')
   end
 end
 
