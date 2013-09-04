@@ -6,6 +6,7 @@ GEM
 
 PLATFORMS
   java
+  ruby
 
 DEPENDENCIES
   jdbc-teradata (~> 0.2.0)

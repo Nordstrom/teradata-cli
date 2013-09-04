@@ -1,13 +1,12 @@
-require "#{File.expand_path File.dirname(__FILE__)}/terajdbc4.jar"
-require 'jdbc/teradata'
 require 'trollop'
 require 'yaml'
-java_import java.sql.Types
+require 'lib/repl'
+require 'lib/configuration'
 
-Jdbc::Teradata::load_driver
 
 @opts = Trollop::options do
-  opt :host, "Teradata host name", :type => String
+  opt :host, "Name of host in configuration", :type => String
+  opt :hostname, "Teradata host name", :type => String
   opt :username, "Teradata username", :type => String
   opt :password, "Teradata password", :type => String
   opt :command, "Teradata SQL command", :type => String
@@ -17,38 +16,71 @@ Jdbc::Teradata::load_driver
   opt :output, "File to write the output to", :type => String
   opt :timeout, "Command timeout in seconds", :type => Integer, :default => 30
   opt :header, "Print column headers in output", :default => false
-  opt :creds, "Credentials file file path", :type => String
+  opt :conf, "Configuration file file path", :type => String
 end
 
 def main()
-  # print @opts.inspect
-  teradata_connection = create_connection(@opts)  
-  sql_statement = teradata_connection.create_statement
-  sql_statement.setQueryTimeout(@opts[:timeout])
-  sql_cmd = get_sql_command(@opts)
-  
-  begin
-    # Execute the Teradata command
-    begin
-      recordset = sql_statement.execute_query(sql_cmd)
-    rescue com.teradata.jdbc.jdbc_4.util.JDBCException => e
-      $stderr.puts "Database exception: #{e.message}"
-      return
-    rescue Exception => e
-      $stderr.puts "Error encountered: #{e.message}"
-      return
-    end
+  # Get config settings from all the following locations. Locations further down 
+  # the list override previously defined settings with the same key.
+  config_locations = [
+    "#{File.expand_path File.dirname(__FILE__)}/../tdsql.conf", 
+    "~/tdsql.conf", 
+    @opts[:conf],
+    @opts
+  ]
 
-    if @opts[:output] 
-      File.open(@opts[:output], 'w') do |file|
-        stream_query_results(recordset, file, @opts)
+  configuration = Configuration.new(@opts)
+
+  sql_cmd = get_sql_command(@opts)
+  teradata = Teradata.new(configuration.get_active_host())
+
+  if sql_cmd.nil?
+    Repl.new(teradata, STDIN, STDOUT, configuration)
+  else
+    teradata.execute_query(sql_stmt)
+    # print @opts.inspect
+    sql_statement = teradata_connection.create_statement
+    sql_statement.setQueryTimeout(@opts[:timeout])
+    
+    
+    begin
+      # Execute the Teradata command
+      begin
+        recordset = sql_statement.execute_query(sql_cmd)
+      rescue com.teradata.jdbc.jdbc_4.util.JDBCException => e
+        $stderr.puts "Database exception: #{e.message}"
+        return
+      rescue Exception => e
+        $stderr.puts "Error encountered: #{e.message}"
+        return
       end
-    else
-      stream_query_results(recordset, $stdout, @opts)
+
+      if @opts[:output] 
+        File.open(@opts[:output], 'w') do |file|
+          stream_query_results(recordset, file, @opts)
+        end
+      else
+        stream_query_results(recordset, $stdout, @opts)
+      end
+    ensure
+      teradata_connection.close
     end
-  ensure
-    teradata_connection.close
   end
+end
+
+def load_configuration(opts)
+  # If a no path to a config file was passed in, look for a tdsql.conf file in the 
+  # user's home directory.
+  config = opts
+  conf_files = ["#{File.expand_path File.dirname(__FILE__)}/tdsql.conf", "~/tdsql.conf", opts[:conf]]
+  conf_files.each do |f|
+    next if f.nil? or not File.exist?(f)
+
+    config.merge! YAML.load_file(f)
+  end
+
+
+  config
 end
 
 def create_connection(opts)
@@ -73,12 +105,13 @@ def get_sql_command(opts)
   if not blank?(opts[:file])
     raise "File #{opts[:file]} does not exist" unless File.exist?(opts[:file])
 
-    file = File.open(opts[:file], 'rb')
-    file.read
-  elsif blank?(opts[:command])
-    raise "Either the --file or --command argument must be provided"
-  else
+    File.open(opts[:file], 'rb') do
+      return file.read
+    end
+  elsif not blank?(opts[:command])
     opts[:command].strip().delete('"')
+  else
+    return nil
   end
 end
 

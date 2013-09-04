@@ -11,9 +11,9 @@ cd `dirname ${SCRIPT_PATH}` > /dev/null
 SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
-# JRUBY_PATH=`which jruby`;
+JRUBY_PATH=`which jruby`;
 # which jruby
-# echo "JRUBY=$JRUBY_PATH"
-rvm use jruby > /dev/null
-ruby $SCRIPT_PATH/main.rb "$@"
+echo "JRUBY=$JRUBY_PATH"
+# rvm use jruby > /dev/null
+jruby $SCRIPT_PATH/main.rb "$@"
 # $JRUBY_PATH $SCRIPT_PATH/main.rb "$@"
